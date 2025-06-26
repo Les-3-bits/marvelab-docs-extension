@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f7;
+    }
+    #sidebar {
+      padding: 20px;
+      background-color: #2c2f48;
+      color: #eee;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    h2, h4 {
+      margin-top: 0;
+      color: #fff;
+    }
+    h4 {
+      margin-top: 25px;
+      font-size: 16px;
+      border-bottom: 1px solid #444b6e;
+    }
+    button {
+      width: 100%;
+      background-color: #3b3f69;
+      border: none;
+      color: #eee;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #576080;
+    }
+    #main-content {
+      margin-top: 30px;
+      padding: 15px;
+      background: #394067;
+      border-radius: 10px;
+    }
+    #prompt {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      background: #292e52;
+      color: #eee;
+    }
+    #generate-btn {
+      background-color: #6c7ae0;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+<div id="sidebar">
+  <h2>Marvelab</h2>
+  <div id="data"></div>
+
+  <div id="main-content">
+    <h3>Génération IA</h3>
+    <textarea id="prompt" rows="3" placeholder="Ex: Crée une conclusion..."></textarea>
+    <button id="generate-btn" onclick="generateText()">Générer texte</button>
+  </div>
+</div>
+
+<script>
+  const API_BASE_URL = 'http://localhost:3000/api';  // ← ici l’URL centrale
+
+  let currentData = {};
+  const projectId = 1; // ou dynamiquement récupéré
+
+  async function fetchData() {
+    const res = await fetch(`${API_BASE_URL}/projects/${projectId}/data`);
+    const json = await res.json();
+    if (json.success) {
+      currentData = json.data;
+      displayData(json.data);
+    } else {
+      alert("Erreur lors du chargement des données Marvelab.");
+    }
+  }
+
+  function displayData(data) {
+    const container = document.getElementById('data');
+    container.innerHTML = '';
+    ['notes', 'interpretations', 'resources'].forEach(type => {
+      const title = document.createElement('h4');
+      title.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+      container.appendChild(title);
+
+      data[type].forEach((item, index) => {
+        const btn = document.createElement('button');
+        btn.textContent = `${type.slice(0, -1)} ${index + 1}`;
+        btn.onclick = () => {
+          const content = type === 'resources' ? item : item;
+          google.script.run.insertText(content);
+        };
+        container.appendChild(btn);
+      });
+    });
+  }
+
+  async function generateText() {
+    const prompt = document.getElementById('prompt').value;
+    if (!prompt.trim()) {
+      alert("Écris un prompt avant de générer.");
+      return;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/gemini/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        projectId: projectId.toString()
+      })
+    });
+
+    const json = await res.json();
+    if (json.success) {
+      google.script.run.insertText(json.data.generatedText);
+      document.getElementById('prompt').value = '';
+    } else {
+      alert("Erreur lors de la génération du texte par Gemini.");
+    }
+  }
+
+  fetchData();
+</script>
+</body>
+</html>
