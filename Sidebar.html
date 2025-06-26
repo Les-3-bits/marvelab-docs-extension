@@ -71,7 +71,7 @@
 </div>
 
 <script>
-  const API_BASE_URL = 'http://localhost:3000/api';  // ← ici l’URL centrale
+  const API_BASE_URL = 'https://marvelab-docs-api.thibaut009.com/api';  // ← ici l’URL centrale
 
   let currentData = {};
   const projectId = 1; // ou dynamiquement récupéré
@@ -99,7 +99,12 @@
         const btn = document.createElement('button');
         btn.textContent = `${type.slice(0, -1)} ${index + 1}`;
         btn.onclick = () => {
-          const content = type === 'resources' ? item : item;
+          let content;
+          if (type === 'resources') {
+            content = item.url; // pour insérer l’image via URL
+          } else {
+            content = item.content; // pour insérer le texte de la note ou interprétation
+          }
           google.script.run.insertText(content);
         };
         container.appendChild(btn);

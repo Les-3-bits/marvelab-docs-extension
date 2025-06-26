@@ -27,3 +27,4 @@ function insertText(content) {
     cursor.insertText(content);
   }
 }
+
