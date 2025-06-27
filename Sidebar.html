@@ -61,8 +61,13 @@
 <body>
 <div id="sidebar">
   <h2>Marvelab</h2>
+  <div id="smart-prompts">
+    <h4>Prompts intelligents</h4>
+    <button onclick="setPrompt('Rédige une introduction sur le sujet du projet.')">Introduction</button>
+    <button onclick="setPrompt('Rédige une conclusion structurée pour ce projet.')">Conclusion structurée</button>
+    <button onclick="setPrompt('Explique la méthodologie utilisée dans cette expérience.')">Explication de méthodologie</button>
+  </div>
   <div id="data"></div>
-
   <div id="main-content">
     <h3>Génération IA</h3>
     <textarea id="prompt" rows="3" placeholder="Ex: Crée une conclusion..."></textarea>
@@ -71,10 +76,14 @@
 </div>
 
 <script>
-  const API_BASE_URL = 'https://marvelab-docs-api.thibaut009.com/api';  // ← ici l’URL centrale
+  const API_BASE_URL = 'https://marvelab-docs-api.thibaut009.com/api';  // ← ici l'URL centrale
 
   let currentData = {};
   const projectId = 1; // ou dynamiquement récupéré
+
+  function setPrompt(text) {
+    document.getElementById('prompt').value = text;
+  }
 
   async function fetchData() {
     const res = await fetch(`${API_BASE_URL}/projects/${projectId}/data`);
@@ -90,25 +99,102 @@
   function displayData(data) {
     const container = document.getElementById('data');
     container.innerHTML = '';
-    ['notes', 'interpretations', 'resources'].forEach(type => {
-      const title = document.createElement('h4');
-      title.textContent = type.charAt(0).toUpperCase() + type.slice(1);
-      container.appendChild(title);
 
-      data[type].forEach((item, index) => {
-        const btn = document.createElement('button');
-        btn.textContent = `${type.slice(0, -1)} ${index + 1}`;
-        btn.onclick = () => {
-          let content;
-          if (type === 'resources') {
-            content = item.url; // pour insérer l’image via URL
-          } else {
-            content = item.content; // pour insérer le texte de la note ou interprétation
-          }
-          google.script.run.insertText(content);
-        };
-        container.appendChild(btn);
-      });
+    // Notes
+    const notesTitle = document.createElement('h4');
+    notesTitle.textContent = "Notes";
+    container.appendChild(notesTitle);
+    data['notes'].forEach((item, index) => {
+      const btn = document.createElement('button');
+      btn.textContent = `Note ${index + 1}`;
+      btn.onclick = () => google.script.run.insertText(item.content);
+      container.appendChild(btn);
+    });
+
+    // Interprétations
+    const interpTitle = document.createElement('h4');
+    interpTitle.textContent = "Interprétations";
+    container.appendChild(interpTitle);
+    data['interpretations'].forEach((item, index) => {
+      // Bouton pour insérer le texte brut
+      const btn = document.createElement('button');
+      btn.textContent = `Interprétation ${index + 1}`;
+      btn.onclick = () => google.script.run.insertText(item.content);
+      container.appendChild(btn);
+
+      // Bouton pour générer un prompt d'explication enrichi
+      const btnExplain = document.createElement('button');
+      btnExplain.textContent = `Explication de méthodologie ${index + 1}`;
+      btnExplain.onclick = () => {
+        let prompt = "Explique comment cette interprétation a été obtenue.\n";
+        if (item.methodology) {
+          prompt += "Méthodologie : " + item.methodology.description + "\n";
+        }
+        if (item.experiment) {
+          prompt += "Protocole expérimental : " + item.experiment.protocol + "\n";
+        }
+        setPrompt(prompt);
+      };
+      container.appendChild(btnExplain);
+    });
+
+    // Ressources
+    const resTitle = document.createElement('h4');
+    resTitle.textContent = "Ressources";
+    container.appendChild(resTitle);
+    data['resources'].forEach((item, index) => {
+      const btn = document.createElement('button');
+      btn.textContent = `Ressource ${index + 1}`;
+      btn.onclick = () => google.script.run.insertText(item.url);
+      container.appendChild(btn);
+    });
+  }
+
+  // Méthodologies
+  async function fetchMethodologies() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/methodologies`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        displayMethodologies(data);
+      }
+    } catch (e) {}
+  }
+
+  function displayMethodologies(methodologies) {
+    const container = document.getElementById('data');
+    const title = document.createElement('h4');
+    title.textContent = "Méthodologies";
+    container.appendChild(title);
+    methodologies.forEach(m => {
+      const btn = document.createElement('button');
+      btn.textContent = m.name;
+      btn.onclick = () => google.script.run.insertText(m.description);
+      container.appendChild(btn);
+    });
+  }
+
+  // Expériences
+  async function fetchExperiments() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/experiments`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        displayExperiments(data);
+      }
+    } catch (e) {}
+  }
+
+  function displayExperiments(experiments) {
+    const container = document.getElementById('data');
+    const title = document.createElement('h4');
+    title.textContent = "Expériences";
+    container.appendChild(title);
+    experiments.forEach(e => {
+      const btn = document.createElement('button');
+      btn.textContent = e.name;
+      btn.onclick = () => google.script.run.insertText(e.protocol);
+      container.appendChild(btn);
     });
   }
 
@@ -138,6 +224,8 @@
   }
 
   fetchData();
+  fetchMethodologies();
+  fetchExperiments();
 </script>
 </body>
 </html>
